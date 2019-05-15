@@ -1,10 +1,14 @@
 package com.gsy.thread;
 
 import com.gsy.util.WebCrawlerUtil;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,7 +20,7 @@ public class GetPicThread implements Runnable {
     Record record;
     Pattern pattern = Pattern.compile("共(\\d+?)页");
     Matcher matcher;
-    public  static  final  String dir = "mm131pic/";
+    public  static  final  String dir = ResourceBundle.getBundle("web").getString("dirPath");
     public GetPicThread( Record record) {
         this.record = record;
     }
@@ -38,6 +42,9 @@ public class GetPicThread implements Runnable {
             if (matcher.find()) {
                 pageNums = Integer.parseInt(matcher.group(1));
             }
+            Document document = Jsoup.parse(pageHtml);
+            Element element = document.getElementsByClass("content-pic").first().getElementsByTag("img").first();
+            pic = element.attr("src");
             String pathdir = null;
             if (pageNums > 0) {
                 System.out.println(pageNums);
@@ -53,8 +60,8 @@ public class GetPicThread implements Runnable {
             }
             try {
                 for (int i = 1; i <= pageNums; i++) {
-                    WebCrawlerUtil.getWebPicture(pic.replaceAll("(.*?)0(\\.jpg)","$1"+""+i+"$2"),i+".jpg",WebCrawlerUtil.getMm131PicHeadersMap(),pathdir);
-                    System.out.println("下载图片"+name+i+".pic");
+                    WebCrawlerUtil.getWebPicture(pic.replaceAll("(.*?)1(\\.jpg)","$1"+""+i+"$2"),i+".jpg",WebCrawlerUtil.getMm131PicHeadersMap(),pathdir);
+                    System.out.println("下载图片"+name+i+".jpg");
                 }
 
             }catch (Exception e){

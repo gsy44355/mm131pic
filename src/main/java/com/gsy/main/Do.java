@@ -8,17 +8,15 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created By Gsy on 2019/5/10
  */
 public class Do {
-    String mainUrl = "http://www.mm131.com/xinggan/list_6_@replace@.html";
-    static int count = 189;
+//    String mainUrl = "http://www.mm131.com/qingchun/list_1_@replace@.html";
+    String mainUrl = ResourceBundle.getBundle("web").getString("replacePage");
+    static int count = Integer.parseInt(ResourceBundle.getBundle("web").getString("count"));
     public static void main(String[] args) {
         new Do();
     }
@@ -26,7 +24,9 @@ public class Do {
     public Do() {
         Record record = new Record();
         LinkedList list = record.getLinkedList();
-        String html = WebCrawlerUtil.getWebHtml("http://www.mm131.com/xinggan",WebCrawlerUtil.getMm131HtmlHeadersMap(),"gb2312");
+        String html; //= WebCrawlerUtil.getWebHtml("http://www.mm131.com/qingchun/",WebCrawlerUtil.getMm131HtmlHeadersMap(),"gb2312");
+        html =        WebCrawlerUtil.getWebHtml(ResourceBundle.getBundle("web").getString("firstPage"),WebCrawlerUtil.getMm131HtmlHeadersMap(),"gb2312");
+        System.out.println(html);
         addUrl(list,html);
         for(int i = 2;i <= count;i++){
             html = WebCrawlerUtil.getWebHtml(mainUrl.replaceAll("@replace@",""+i),WebCrawlerUtil.getMm131HtmlHeadersMap(),"gb2312");

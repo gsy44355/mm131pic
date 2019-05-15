@@ -22,7 +22,10 @@ public class Record {
             Map re =  linkedList.getFirst();
             linkedList.remove(re);
             return re;
+        }else {
+            System.out.println("获取不到");
         }
+        System.out.println("获取不到网页了");
         return null;
     }
 

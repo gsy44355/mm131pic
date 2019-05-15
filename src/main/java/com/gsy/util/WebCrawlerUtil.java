@@ -1,13 +1,23 @@
 package com.gsy.util;
 
 import com.gsy.gsy_common_util.fileUtil.FileUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.RequestBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.util.EntityUtils;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Created By Gsy on 2019/5/10
@@ -77,7 +87,7 @@ public class WebCrawlerUtil {
         }
     }
 
-    public static String getWebHtml(String urlStr,Map<String,String> headers,String encoding){
+    public static String getWebHtml(String urlStr,String encoding){
         InputStream inputStream = null;
         String string = null;
         BufferedReader br = null;
@@ -109,6 +119,68 @@ public class WebCrawlerUtil {
         return string;
     }
 
+    public static String getWebHtml(String urlStr,Map<String,String> headers,String encoding){
+        InputStream inputStream = null;
+        String string = null;
+        BufferedReader br = null;
+        try {
+            URL url = new URL(urlStr);
+//            inputStream = url.openStream();
+
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(5000);
+            connection.setRequestMethod("GET");
+            Set<Map.Entry<String, String>> entrySet = headers.entrySet();
+            for (Map.Entry<String,String> entry: entrySet) {
+                connection.addRequestProperty(entry.getKey(),entry.getValue());
+            }
+            inputStream = connection.getInputStream();
+            GZIPInputStream gzis=new GZIPInputStream(inputStream);
+            InputStreamReader reader = new InputStreamReader(gzis,encoding);
+            br = new BufferedReader(reader);
+//            br = new BufferedReader(new InputStreamReader(inputStream, encoding));
+            StringBuilder sb = new StringBuilder();
+            String s;
+            while ((s = br.readLine()) != null) {
+                sb.append(s);
+            }
+            string = sb.toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return getWebHtml(urlStr,headers,encoding);
+        }finally {
+            FileUtils.safeClose(inputStream);
+            FileUtils.safeClose(br);
+        }
+        return string;
+    }
+
+    public static String getHtml(String url,Map<String,String> headers,String encoding){
+        //构造Headers
+        List<Header> headerList = new ArrayList<>();
+        Set<Map.Entry<String, String>> entrySet = headers.entrySet();
+        for (Map.Entry<String,String> entry: entrySet) {
+            headerList.add(new BasicHeader(entry.getKey(),entry.getValue()));
+        }
+        //构造HttpClient
+        HttpClient httpClient = HttpClients.custom().setDefaultHeaders(headerList).build();
+        //构造HttpGet请求
+        HttpUriRequest httpUriRequest = RequestBuilder.get().setUri(url).build();
+        //获取结果
+        HttpResponse httpResponse = null;
+        String rawHTMLContent = null;
+        try {
+            httpResponse = httpClient.execute(httpUriRequest);
+            //获取返回结果中的实体
+            HttpEntity entity = httpResponse.getEntity();
+
+            //查看页面内容结果
+            rawHTMLContent = EntityUtils.toString(entity,encoding);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return rawHTMLContent;
+    }
     /**
      * 返回一个通用的headersMap供代码使用，建议自行拼装。
      * @return
@@ -125,6 +197,7 @@ public class WebCrawlerUtil {
     public static Map<String,String> getMm131PicHeadersMap(){
         Map<String,String> map = new HashMap<String, String>();
         map.put("Accept","image/webp,image/apng,image/*,*/*;q=0.8");
+        map.put("x-forwarded-for",getRandomIp());
         map.put("Accept-Encoding","gzip, deflate");
         map.put("Language","zh-CN,zh;q=0.9,en;q=0.8");
         map.put("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36");
@@ -137,6 +210,7 @@ public class WebCrawlerUtil {
         Map<String,String> map = new HashMap<String, String>();
         map.put("Host"," www.mm131.com");
         map.put("Proxy-Connection"," keep-alive");
+        map.put("x-forwarded-for",getRandomIp());
         map.put("Upgrade-Insecure-Requests","1");
         map.put("User-Agent"," Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36");
         map.put("Accept"," text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3");
@@ -146,4 +220,41 @@ public class WebCrawlerUtil {
         map.put("Cookie"," bdshare_firstime=1557462796510; Hm_lvt_9a737a8572f89206db6e9c301695b55a=1557462797; Hm_lpvt_9a737a8572f89206db6e9c301695b55a=1557482771");
         return map;
     }
+    public static String getRandomIp() {
+
+        // ip范围
+        int[][] range = { { 607649792, 608174079 }, // 36.56.0.0-36.63.255.255
+                { 1038614528, 1039007743 }, // 61.232.0.0-61.237.255.255
+                { 1783627776, 1784676351 }, // 106.80.0.0-106.95.255.255
+                { 2035023872, 2035154943 }, // 121.76.0.0-121.77.255.255
+                { 2078801920, 2079064063 }, // 123.232.0.0-123.235.255.255
+                { -1950089216, -1948778497 }, // 139.196.0.0-139.215.255.255
+                { -1425539072, -1425014785 }, // 171.8.0.0-171.15.255.255
+                { -1236271104, -1235419137 }, // 182.80.0.0-182.92.255.255
+                { -770113536, -768606209 }, // 210.25.0.0-210.47.255.255
+                { -569376768, -564133889 }, // 222.16.0.0-222.95.255.255
+        };
+
+        Random rdint = new SecureRandom();
+        int index = rdint.nextInt(10);
+        String ip = num2ip(range[index][0] + new Random().nextInt(range[index][1] - range[index][0]));
+        return ip;
+    }
+
+    /*
+     * 将十进制转换成IP地址
+     */
+    public static String num2ip(int ip) {
+        int[] b = new int[4];
+        String x = "";
+        b[0] = (int) ((ip >> 24) & 0xff);
+        b[1] = (int) ((ip >> 16) & 0xff);
+        b[2] = (int) ((ip >> 8) & 0xff);
+        b[3] = (int) (ip & 0xff);
+        x = Integer.toString(b[0]) + "." + Integer.toString(b[1]) + "." + Integer.toString(b[2]) + "." + Integer.toString(b[3]);
+
+        return x;
+    }
+
+
 }
